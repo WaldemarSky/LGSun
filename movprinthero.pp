@@ -6,29 +6,33 @@ const
     LenghtHeroString = 9;
 
 type
-    HeroCondition = (HcUpFirst, HcUpSecond, HcDownFirst, HcDownSecond,
-        HcDownFirstBlink, HcDownSecondBlink);
-
-    HeroDuration = (HdUp, HdDown);
+    HeroDuration = (HdUp, HdLeft, HdDown, HdRight);
+    HeroCondition = (HcBackFirst, HcBackSecond, HcBackHit, 
+        HcFrontFirst, HcFrontSecond, HcFrontHit,
+        HcFirstBlink, HcSecondBlink);
 
     HeroConditionsList = array[HeroCondition]
         of array [1..HstringCount] of string[LenghtHeroString];
+
+    HeroMapPrinting = array[0..7, 1..HStringCount] of integer;
 
 
     Hero = record
         CenX, CenY: integer;
         HCondList: HeroConditionsList; 
         x, y: integer;
+        duration: HeroDuration;
         condition: HeroCondition;
+        PrintMap: HeroMapPrinting;
     end;
 
 procedure HeroInit(var h: Hero);
 procedure HeroConditionListInit(var h: Hero);
+procedure HeroMapPrintingInit(var h: Hero);
 procedure ShowHero(var h: Hero);
-procedure MoveHero(var h: hero; x, y: integer);
 
 implementation
-uses crt, StartEndGame, MovPrintChar;
+uses crt, StartEndGame, MovPrintChar, GameField;
 
 procedure HeroInit(var h: Hero);
 begin
@@ -36,42 +40,79 @@ begin
     h.CenY := ScreenHeight div 2;
     h.x := 0; 
     h.y := 0;
-    h.condition := HcDownFirst
+    h.duration := HdDown;
+    h.condition := HcFrontFirst
 end;
 
 procedure HeroConditionListInit(var h: Hero);
 begin
-    h.HcondList[HcUpFirst, 1] := '  _---_  ';
-    h.HcondList[HcUpFirst, 2] := '\ \\|//  ';
-    h.HcondList[HcUpFirst, 3] := ' \#&&&#  ';
-    h.HcondList[HcUpFirst, 4] := '   #^$   ';
+    h.HcondList[HcBackFirst, 1] := '_---_';
+    h.HcondList[HcBackFirst, 2] := '\ \\|//';
+    h.HcondList[HcBackFirst, 3] := '\#&&&#';
+    h.HcondList[HcBackFirst, 4] := '#^$';
     
-    h.HcondList[HcUpSecond, 1] := '  _---_  ';
-    h.HcondList[HcUpSecond, 2] := '\ \\|//  ';
-    h.HcondList[HcUpSecond, 3] := ' \#&&&#  ';
-    h.HcondList[HcUpSecond, 4] := '   $^#^  ';
+    h.HcondList[HcBackSecond, 1] := '_---_';
+    h.HcondList[HcBackSecond, 2] := '\ \\|//';
+    h.HcondList[HcBackSecond, 3] := '\#&&&#';
+    h.HcondList[HcBackSecond, 4] := '$^#"';
 
-    h.HcondList[HcDownFirst, 1] := '  _---_  ';
-    h.HcondList[HcDownFirst, 2] := '  \*_*/ /';
-    h.HcondList[HcDownFirst, 3] := '  #&@&#/ ';
-    h.HcondList[HcDownFirst, 4] := '  ^$^#   ';
+    h.HcondList[HcBackHit, 1] := '_---_  ';
+    h.HcondList[HcBackHit, 2] := '\\|//  ';
+    h.HcondList[HcBackHit, 3] := '|#&&&#  ';
+    h.HcondList[HcBackHit, 4] := '$^#"  ';
 
-    h.HcondList[HcDownSecond, 1] := '  _---_  ';
-    h.HcondList[HcDownSecond, 2] := '  \*_*/ /';
-    h.HcondList[HcDownSecond, 3] := '  #&@&#/ ';
-    h.HcondList[HcDownSecond, 4] := '   #^$   ';
+    h.HcondList[HcFrontFirst, 1] := '_---_  ';
+    h.HcondList[HcFrontFirst, 2] := '\*_*/ /';
+    h.HcondList[HcFrontFirst, 3] := '#&@&#/ ';
+    h.HcondList[HcFrontFirst, 4] := '"$^#   ';
 
-    h.HcondList[HcDownFirstBlink, 1] := '  _---_  ';
-    h.HcondList[HcDownFirstBlink, 2] := '  \-_-/ /';
-    h.HcondList[HcDownFirstBlink, 3] := '  #&@&#/ ';
-    h.HcondList[HcDownFirstBlink, 4] := '  ^$^#   ';
+    h.HcondList[HcFrontSecond, 1] := '_---_  ';
+    h.HcondList[HcFrontSecond, 2] := '\*_*/ /';
+    h.HcondList[HcFrontSecond, 3] := '#&@&#/ ';
+    h.HcondList[HcFrontSecond, 4] := '#^$   ';
 
-    h.HcondList[HcDownSecondBlink, 1] := '  _---_  ';
-    h.HcondList[HcDownSecondBlink, 2] := '  \-_-/ /';
-    h.HcondList[HcDownSecondBlink, 3] := '  #&@&#/ ';
-    h.HcondList[HcDownSecondBlink, 4] := '   #^$   '
+    h.HcondList[HcFrontHit, 1] := '_---_';
+    h.HcondList[HcFrontHit, 2] := '\*_*/';
+    h.HcondList[HcFrontHit, 3] := '#&@&#|';
+    h.HcondList[HcFrontHit, 4] := '"#^$';
+
+    h.HcondList[HcFirstBlink, 1] := '_---_  ';
+    h.HcondList[HcFirstBlink, 2] := '\-_-/ /';
+    h.HcondList[HcFirstBlink, 3] := '#&@&#/ ';
+    h.HcondList[HcFirstBlink, 4] := '"$^#   ';
+
+    h.HcondList[HcSecondBlink, 1] := '_---_  ';
+    h.HcondList[HcSecondBlink, 2] := '\-_-/ /';
+    h.HcondList[HcSecondBlink, 3] := '#&@&#/ ';
+    h.HcondList[HcSecondBlink, 4] := '#^$   '
 end;
 
+procedure HeroMapPrintingInit(var h: Hero);
+begin
+    h.PrintMap[0][1] := 2; h.PrintMap[0][2] := 0;
+    h.PrintMap[0][3] := 1; h.PrintMap[0][4] := 3;
+
+    h.PrintMap[1][1] := 2; h.PrintMap[1][2] := 0;
+    h.PrintMap[1][3] := 1; h.PrintMap[1][4] := 3;
+
+    h.PrintMap[2][1] := 2; h.PrintMap[2][2] := 2;
+    h.PrintMap[2][3] := 1; h.PrintMap[2][4] := 3;
+
+    h.PrintMap[3][1] := 2; h.PrintMap[3][2] := 2;
+    h.PrintMap[3][3] := 2; h.PrintMap[3][4] := 2;
+
+    h.PrintMap[4][1] := 2; h.PrintMap[4][2] := 2;
+    h.PrintMap[4][3] := 2; h.PrintMap[4][4] := 3;
+
+    h.PrintMap[5][1] := 2; h.PrintMap[5][2] := 2;
+    h.PrintMap[5][3] := 2; h.PrintMap[5][4] := 2;
+
+    h.PrintMap[6][1] := 2; h.PrintMap[6][2] := 2;
+    h.PrintMap[6][3] := 2; h.PrintMap[6][4] := 3;
+
+    h.PrintMap[7][1] := 2; h.PrintMap[7][2] := 2;
+    h.PrintMap[7][3] := 2; h.PrintMap[7][4] := 3
+end;
 
 procedure ShowHero(var h: Hero);
 var
@@ -79,14 +120,14 @@ var
 begin
     g := 1;
     for i := -2 to 1 do begin
-        GotoXY(h.CenX, h.CenY+i);
+        GotoXY(h.CenX + h.PrintMap[ord(h.condition), g], h.CenY+i);
         write(h.HCondList[h.condition, g]);
         g := g + 1
     end;
     GotoXY(1, 1)
 end;
 
-procedure HideHero(var h: Hero);
+{procedure HideHero(var h: Hero);
 var
     i, g: integer;
 begin
@@ -97,24 +138,6 @@ begin
         g := g + 1
     end;
     GotoXY(1, 1)
-end;
-
-procedure MoveHero(var h: hero; x, y: integer);
-begin
-    HideHero(h);
-    // if not IsBarrier then begin
-        h.x := h.x + x;
-        h.y := h.y + y;
-        if (y = -1) and (ord(h.condition) > 1) then
-            h.condition := HcUpFirst; 
-        if (y = 1) and (ord(h.condition) < 2) then
-            h.condition := HcDownFirst; 
-        if ord(h.condition) mod 2 = 0 then
-            h.condition := succ(h.condition) 
-        else
-            h.condition := pred(h.condition);
-        ShowHero(h)
-    // end
-end;
+end;}
 
 end.

@@ -5,7 +5,7 @@ const
     LeftButton = -75;
     RightButton = -77;
     UpButton = -72;
-    DownButton = - 80;
+    DownButton = -80;
     EndButton = 27;
 
 procedure GeneralCycle;
@@ -20,10 +20,10 @@ begin
     if not TSIsEmpty(stack) then begin
         TSPop(stack, TaskTop);
         case TaskTop of
-        MvLeft: MoveHero(h, -1, 0);
-        MvRight: MoveHero(h, 1, 0);
-        MvUp: MoveHero(h, 0, -1);
-        MvDown: MoveHero(h, 0, 1);
+        MvLeft: MoveHero(h, field, -1, 0, ShiftX, ShiftY);
+        MvRight: MoveHero(h, field, 1, 0, ShiftX, ShiftY);
+        MvUp: MoveHero(h, field, 0, -1, ShiftX, ShiftY);
+        MvDown: MoveHero(h, field, 0, 1, ShiftX, ShiftY);
         end;
         RewriteField(field, h, ShiftX, ShiftY);
         GotoXY(1, 1);
@@ -80,10 +80,10 @@ begin
     GFieldInit(field);
     HeroInit(h);
     HeroConditionListInit(h);
-    ShowHero(h);  
+    HeroMapPrintingInit(h);
     RewriteField(field, h, ShiftFieldX, ShiftFieldY);
+    ShowHero(h);  
     while true do begin
-        BlinkHero(h, i, g);
         if KeyPressed then begin
             GetKey(c);
             case c of
