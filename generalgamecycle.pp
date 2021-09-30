@@ -11,21 +11,27 @@ const
 procedure GeneralCycle;
 
 implementation
-uses crt, StartEndGame, MovPrintHero, MovPrintChar, TaskStackUnit, GameField;
+uses crt, StartEndGame, MovPrintHero, MovPrintChar, TaskStackUnit, GameField, Ratata;
 
-procedure DoFromQueue(var stack: TaskStack; var h: hero; field: Gfield; ShiftX, ShiftY: integer);
+procedure DoFromQueue(var stack: TaskStack; var h: hero; var r: ArrayRats; field: Gfield; ShiftX, ShiftY: integer);
 var
     TaskTop: tasks;
+    who: integer;
 begin
     if not TSIsEmpty(stack) then begin
-        TSPop(stack, TaskTop);
+        TSPop(stack, TaskTop, who);
         case TaskTop of
-        MvLeft: MoveHero(h, field, -1, 0, ShiftX, ShiftY);
-        MvRight: MoveHero(h, field, 1, 0, ShiftX, ShiftY);
-        MvUp: MoveHero(h, field, 0, -1, ShiftX, ShiftY);
-        MvDown: MoveHero(h, field, 0, 1, ShiftX, ShiftY);
+        MvLeft: MoveHero(h, r, field, -1, 0, ShiftX, ShiftY);
+        MvRight: MoveHero(h, r, field, 1, 0, ShiftX, ShiftY);
+        MvUp: MoveHero(h, r, field, 0, -1, ShiftX, ShiftY);
+        MvDown: MoveHero(h, r, field, 0, 1, ShiftX, ShiftY);
+
+        RtLeft: MoveRat(r[who], field, -1, 0);
+        RtRight: MoveRat(r[who], field, 1, 0);
+        RtUp: MoveRat(r[who], field, 0, -1);
+        RtDown: MoveRat(r[who], field, 0, 1)
         end;
-        RewriteField(field, h, ShiftX, ShiftY);
+        RewriteField(field, h, r, ShiftX, ShiftY);
         GotoXY(1, 1);
         write('x: ', h.x, '  ', 'y: ', h.y, '       ')
     end
@@ -67,6 +73,7 @@ var
     h: Hero;
     TStack: TaskStack;
     field: GField;
+    rats: ArrayRats;
     i: longint = 1;                     {counter for close eyes}
     g: longint = 0;                     {counter for open eyes}
     ShiftFieldX: integer;
@@ -74,6 +81,7 @@ var
 
 begin
     clrscr;
+    randomize;
     ShiftFieldX := -ScreenWidth div 2;
     ShiftFieldY := -ScreenHeight div 2;
     TSInit(TStack);
@@ -81,19 +89,20 @@ begin
     HeroInit(h);
     HeroConditionListInit(h);
     HeroMapPrintingInit(h);
-    RewriteField(field, h, ShiftFieldX, ShiftFieldY);
-    ShowHero(h);  
+    ArrayRatsInit(rats);
+    RewriteField(field, h, rats, ShiftFieldX, ShiftFieldY);
     while true do begin
+        DoFromQueue(TStack, h, rats, field, ShiftFieldX, ShiftFieldY);
+        DoRatsTurn(TStack, rats);
         if KeyPressed then begin
             GetKey(c);
             case c of
-            LeftButton: TSPush(TStack, MvLeft);
-            RightButton: TSPush(TStack, MvRight);
-            UpButton: TSPush(TStack, MvUp);
-            DownButton: TSPush(TStack, MvDown);
+            LeftButton: TSPush(TStack, MvLeft, 0);
+            RightButton: TSPush(TStack, MvRight, 0);
+            UpButton: TSPush(TStack, MvUp, 0);
+            DownButton: TSPush(TStack, MvDown, 0);
             EndButton: ToEndGame;
-            end;
-            DoFromQueue(TStack, h, field, ShiftFieldX, ShiftFieldY)
+            end
         end
     end
 end;

@@ -4,6 +4,10 @@ interface
 const
     HStringCount = 4;
     LenghtHeroString = 9;
+    LeftHeroBorder = -4;
+    RightHeroBorder = 2;
+    UpHeroBorder = -2;
+    DownHeroBorder = 3;
 
 type
     HeroDuration = (HdUp, HdLeft, HdDown, HdRight);
@@ -16,9 +20,8 @@ type
 
     HeroMapPrinting = array[0..7, 1..HStringCount] of integer;
 
-
     Hero = record
-        CenX, CenY: integer;
+        CenXfield, CenX, CenY: integer;
         HCondList: HeroConditionsList; 
         x, y: integer;
         duration: HeroDuration;
@@ -36,6 +39,7 @@ uses crt, StartEndGame, MovPrintChar, GameField;
 
 procedure HeroInit(var h: Hero);
 begin
+    h.CenXfield := ScreenWidth div 2;
     h.CenX := (ScreenWidth - LenghtHeroString) div 2;
     h.CenY := ScreenHeight div 2;
     h.x := 0; 
@@ -61,15 +65,15 @@ begin
     h.HcondList[HcBackHit, 3] := '|#&&&#  ';
     h.HcondList[HcBackHit, 4] := '$^#"  ';
 
-    h.HcondList[HcFrontFirst, 1] := '_---_  ';
+    h.HcondList[HcFrontFirst, 1] := '_---_';
     h.HcondList[HcFrontFirst, 2] := '\*_*/ /';
-    h.HcondList[HcFrontFirst, 3] := '#&@&#/ ';
-    h.HcondList[HcFrontFirst, 4] := '"$^#   ';
+    h.HcondList[HcFrontFirst, 3] := '#&@&#/';
+    h.HcondList[HcFrontFirst, 4] := '"$^#';
 
-    h.HcondList[HcFrontSecond, 1] := '_---_  ';
+    h.HcondList[HcFrontSecond, 1] := '_---_';
     h.HcondList[HcFrontSecond, 2] := '\*_*/ /';
-    h.HcondList[HcFrontSecond, 3] := '#&@&#/ ';
-    h.HcondList[HcFrontSecond, 4] := '#^$   ';
+    h.HcondList[HcFrontSecond, 3] := '#&@&#/';
+    h.HcondList[HcFrontSecond, 4] := '#^$';
 
     h.HcondList[HcFrontHit, 1] := '_---_';
     h.HcondList[HcFrontHit, 2] := '\*_*/';
@@ -126,18 +130,5 @@ begin
     end;
     GotoXY(1, 1)
 end;
-
-{procedure HideHero(var h: Hero);
-var
-    i, g: integer;
-begin
-    g := 1;
-    for i := -2 to 1 do begin
-        GotoXY(h.CenX-2, h.CenY+i);
-        write('    ');
-        g := g + 1
-    end;
-    GotoXY(1, 1)
-end;}
 
 end.
