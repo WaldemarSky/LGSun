@@ -1,6 +1,7 @@
 unit MovPrintHero;                      {movprinthero.pp}
 
 interface
+uses SysUtils;
 const
     HStringCount = 4;
     LenghtHeroString = 9;
@@ -8,6 +9,10 @@ const
     RightHeroBorder = 2;
     UpHeroBorder = -2;
     DownHeroBorder = 3;
+    MxOpEyDur = 4500;
+    MnOpEyDur = 800;
+    MxClEyDur = 300;
+    MnClEyDur = 70;
 
 type
     HeroDuration = (HdUp, HdLeft, HdDown, HdRight);
@@ -27,6 +32,10 @@ type
         duration: HeroDuration;
         condition: HeroCondition;
         PrintMap: HeroMapPrinting;
+        BlinkTimer: TDateTime;
+        OpEyDur: integer;
+        ClEyDur: integer;
+        HitTimer: TDateTime;
     end;
 
 procedure HeroInit(var h: Hero);
@@ -45,50 +54,53 @@ begin
     h.x := 0; 
     h.y := 0;
     h.duration := HdDown;
-    h.condition := HcFrontFirst
+    h.condition := HcFrontFirst;
+    h.BlinkTimer := now;
+    h.OpEyDur := random(MxOpEyDur - MnOpEyDur + 1) + MnOpEyDur;
+    h.ClEyDur := random(MxClEyDur - MnClEyDur + 1) + MnClEyDur;
 end;
 
 procedure HeroConditionListInit(var h: Hero);
 begin
     h.HcondList[HcBackFirst, 1] := '_---_';
-    h.HcondList[HcBackFirst, 2] := '\ \\|//';
+    h.HcondList[HcBackFirst, 2] := '\ \\|//';           {0}
     h.HcondList[HcBackFirst, 3] := '\#&&&#';
     h.HcondList[HcBackFirst, 4] := '#^$';
     
     h.HcondList[HcBackSecond, 1] := '_---_';
-    h.HcondList[HcBackSecond, 2] := '\ \\|//';
+    h.HcondList[HcBackSecond, 2] := '\ \\|//';          {1}
     h.HcondList[HcBackSecond, 3] := '\#&&&#';
     h.HcondList[HcBackSecond, 4] := '$^#"';
 
-    h.HcondList[HcBackHit, 1] := '_---_  ';
-    h.HcondList[HcBackHit, 2] := '\\|//  ';
-    h.HcondList[HcBackHit, 3] := '|#&&&#  ';
-    h.HcondList[HcBackHit, 4] := '$^#"  ';
+    h.HcondList[HcBackHit, 1] := '_---_';
+    h.HcondList[HcBackHit, 2] := '\\|//';
+    h.HcondList[HcBackHit, 3] := '---#&&&#';            {2}
+    h.HcondList[HcBackHit, 4] := '$^#"';
 
     h.HcondList[HcFrontFirst, 1] := '_---_';
-    h.HcondList[HcFrontFirst, 2] := '\*_*/ /';
+    h.HcondList[HcFrontFirst, 2] := '\*_*/ /';          {3}
     h.HcondList[HcFrontFirst, 3] := '#&@&#/';
     h.HcondList[HcFrontFirst, 4] := '"$^#';
 
     h.HcondList[HcFrontSecond, 1] := '_---_';
-    h.HcondList[HcFrontSecond, 2] := '\*_*/ /';
+    h.HcondList[HcFrontSecond, 2] := '\*_*/ /';         {4}
     h.HcondList[HcFrontSecond, 3] := '#&@&#/';
     h.HcondList[HcFrontSecond, 4] := '#^$';
 
     h.HcondList[HcFrontHit, 1] := '_---_';
     h.HcondList[HcFrontHit, 2] := '\*_*/';
-    h.HcondList[HcFrontHit, 3] := '#&@&#|';
+    h.HcondList[HcFrontHit, 3] := '#&@&#---';           {5}
     h.HcondList[HcFrontHit, 4] := '"#^$';
 
-    h.HcondList[HcFirstBlink, 1] := '_---_  ';
+    h.HcondList[HcFirstBlink, 1] := '_---_';
     h.HcondList[HcFirstBlink, 2] := '\-_-/ /';
-    h.HcondList[HcFirstBlink, 3] := '#&@&#/ ';
-    h.HcondList[HcFirstBlink, 4] := '"$^#   ';
+    h.HcondList[HcFirstBlink, 3] := '#&@&#/';           {6}
+    h.HcondList[HcFirstBlink, 4] := '"$^#';
 
-    h.HcondList[HcSecondBlink, 1] := '_---_  ';
-    h.HcondList[HcSecondBlink, 2] := '\-_-/ /';
+    h.HcondList[HcSecondBlink, 1] := '_---_';
+    h.HcondList[HcSecondBlink, 2] := '\-_-/ /';         {7}
     h.HcondList[HcSecondBlink, 3] := '#&@&#/ ';
-    h.HcondList[HcSecondBlink, 4] := '#^$   '
+    h.HcondList[HcSecondBlink, 4] := '#^$';
 end;
 
 procedure HeroMapPrintingInit(var h: Hero);
@@ -100,7 +112,7 @@ begin
     h.PrintMap[1][3] := 1; h.PrintMap[1][4] := 3;
 
     h.PrintMap[2][1] := 2; h.PrintMap[2][2] := 2;
-    h.PrintMap[2][3] := 1; h.PrintMap[2][4] := 3;
+    h.PrintMap[2][3] := -1; h.PrintMap[2][4] := 3;
 
     h.PrintMap[3][1] := 2; h.PrintMap[3][2] := 2;
     h.PrintMap[3][3] := 2; h.PrintMap[3][4] := 2;
@@ -112,7 +124,7 @@ begin
     h.PrintMap[5][3] := 2; h.PrintMap[5][4] := 2;
 
     h.PrintMap[6][1] := 2; h.PrintMap[6][2] := 2;
-    h.PrintMap[6][3] := 2; h.PrintMap[6][4] := 3;
+    h.PrintMap[6][3] := 2; h.PrintMap[6][4] := 2;
 
     h.PrintMap[7][1] := 2; h.PrintMap[7][2] := 2;
     h.PrintMap[7][3] := 2; h.PrintMap[7][4] := 3
@@ -123,7 +135,7 @@ var
     i, g: integer;
 begin
     g := 1;
-    for i := -2 to 1 do begin
+    for i := -1 to 2 do begin
         GotoXY(h.CenX + h.PrintMap[ord(h.condition), g], h.CenY+i);
         write(h.HCondList[h.condition, g]);
         g := g + 1

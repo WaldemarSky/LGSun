@@ -7,13 +7,20 @@ const
     UpButton = -72;
     DownButton = -80;
     EndButton = 27;
+    HitButton = 113;
 
 procedure GeneralCycle;
 
 implementation
-uses crt, StartEndGame, MovPrintHero, MovPrintChar, TaskStackUnit, GameField, Ratata;
+uses crt, SysUtils, DateUtils, StartEndGame, MovPrintHero, MovPrintChar, TaskStackUnit, GameField, Ratata;
 
-procedure DoFromQueue(var stack: TaskStack; var h: hero; var r: ArrayRats; field: Gfield; ShiftX, ShiftY: integer);
+procedure DoHit(var stack: TaskStack; var h: hero; var r: ArrayRats);
+begin
+    TsPush(stack, EndHit, 0);
+    TsPush(stack, StartHit, 0);
+end;
+
+procedure DoFromQueue(var stack: TaskStack; var h: hero; var r: ArrayRats; var field: Gfield; ShiftX, ShiftY: integer);
 var
     TaskTop: tasks;
     who: integer;
@@ -25,47 +32,43 @@ begin
         MvRight: MoveHero(h, r, field, 1, 0, ShiftX, ShiftY);
         MvUp: MoveHero(h, r, field, 0, -1, ShiftX, ShiftY);
         MvDown: MoveHero(h, r, field, 0, 1, ShiftX, ShiftY);
+        StartHit: HitHero(h, field, r, ShiftX, ShiftY);
+        EndHit: EndHitHero(h, field, stack, r, ShiftX, ShiftY);
 
-        RtLeft: MoveRat(r[who], field, -1, 0);
-        RtRight: MoveRat(r[who], field, 1, 0);
-        RtUp: MoveRat(r[who], field, 0, -1);
-        RtDown: MoveRat(r[who], field, 0, 1)
+        RtLeft: MoveRat(r[who], h, field, -1, 0);
+        RtRight: MoveRat(r[who],h, field, 1, 0);
+        RtUp: MoveRat(r[who], h, field, 0, -1);
+        RtDown: MoveRat(r[who], h, field, 0, 1)
         end;
-        RewriteField(field, h, r, ShiftX, ShiftY);
         GotoXY(1, 1);
         write('x: ', h.x, '  ', 'y: ', h.y, '       ')
     end
 end;
 
-procedure DoBlink(var h: hero);
+procedure DoBlinkHero(var h: hero);
+var
+    t: TDateTime;
 begin
-    if (ord(h.condition) < 4) and (ord(h.condition) > 1) then begin
-        h.condition := succ (succ(h.condition));
-        ShowHero(h)
+    t := now;
+    if (h.condition = HcFrontFirst) or (h.condition = HcFrontSecond) then begin
+        if MillisecondsBetween(h.BlinkTimer, t) > h.OpEyDur then begin
+            h.OpEyDur := random(MxOpEyDur - MnOpEyDur + 1) + MnOpEyDur;
+            h.BlinkTimer := t;
+            h.condition := HeroCondition(ord(h.condition) + 3);
+            ShowHero(h)
+        end
     end
-    else if ord(h.condition) >= 4 then begin
-        h.condition := pred(pred(h.condition));
-        ShowHero(h);
-    end
-end;
-
-procedure BlinkHero(var h: hero; var CCounter, OCounter: longint);
-begin
-    if  CCounter <> 0 then
-        CCounter := CCounter + 1;
-    if CCounter > 80000 then begin
-        DoBlink(h);
-        CCounter := 0
-    end;
-    if CCounter = 0 then begin
-        OCounter := OCounter + 1;
-        if OCounter = 6000 then begin
-            DoBlink(h);
-            CCounter := 1;
-            OCounter := 0
+    else if (h.condition = HcFirstBlink)
+        or (h.condition = HcSecondBlink) then begin
+        if MillisecondsBetween(h.BlinkTimer, t) > h.ClEyDur then begin
+            h.ClEyDur := random(MxClEyDur - MnClEyDur + 1) + MnClEyDur;
+            h.BlinkTimer := t;
+            h.condition := HeroCondition(ord(h.condition) - 3);
+            ShowHero(h)
         end
     end
 end;
+
 
 procedure GeneralCycle;
 var
@@ -74,11 +77,9 @@ var
     TStack: TaskStack;
     field: GField;
     rats: ArrayRats;
-    i: longint = 1;                     {counter for close eyes}
-    g: longint = 0;                     {counter for open eyes}
     ShiftFieldX: integer;
     ShiftFieldY: integer;
-
+    l: integer;
 begin
     clrscr;
     randomize;
@@ -89,11 +90,15 @@ begin
     HeroInit(h);
     HeroConditionListInit(h);
     HeroMapPrintingInit(h);
+    InitHeroAttend(h, field, HeroSN);
     ArrayRatsInit(rats);
+    for l := 1 to RatCount do
+        InitRatAttend(rats[l],field, RatSN);
     RewriteField(field, h, rats, ShiftFieldX, ShiftFieldY);
     while true do begin
         DoFromQueue(TStack, h, rats, field, ShiftFieldX, ShiftFieldY);
-        DoRatsTurn(TStack, rats);
+        DoRatsTurn(h, TStack, rats);
+        DoBlinkHero(h);
         if KeyPressed then begin
             GetKey(c);
             case c of
@@ -101,6 +106,7 @@ begin
             RightButton: TSPush(TStack, MvRight, 0);
             UpButton: TSPush(TStack, MvUp, 0);
             DownButton: TSPush(TStack, MvDown, 0);
+            HitButton: DoHit(Tstack, h, rats);
             EndButton: ToEndGame;
             end
         end

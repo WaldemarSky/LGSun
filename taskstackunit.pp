@@ -2,7 +2,8 @@ unit TaskStackUnit;                     {taskstackunit.pp}
 
 interface
 type
-    tasks = (MvLeft, MvRight, MvUp, MvDown, DhBlink, RtLeft, RtRight, RtUp, RtDown);
+    tasks = (MvLeft, MvRight, MvUp, MvDown, StartHit,
+        EndHit, RtLeft, RtRight, RtUp, RtDown);
     
     TaskPtr = ^task;
     task = record
@@ -19,7 +20,6 @@ procedure TSPop(var stack: TaskStack; var t: tasks; var w: integer);
 function TSIsEmpty(var stack: TaskStack): boolean;
 
 implementation
-
 procedure TSInit(var stack: TaskStack);
 begin
     stack := nil;
