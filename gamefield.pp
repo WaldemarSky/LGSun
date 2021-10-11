@@ -156,7 +156,7 @@ procedure RewriteField(var field: Gfield; var h: Hero; var r: ArrayRats; ShiftX,
 var
     x, y: integer;
 begin
-    for y := 1 to (ScreenHeight div 2 - 2) do
+    for y := 2 to (ScreenHeight div 2 - 2) do
         for x := 1 to ScreenWidth do begin 
             GotoXY(x, y);
             write(field[h.x + ShiftX + x, h.y + ShiftY + y].ch)
@@ -189,7 +189,8 @@ begin
             write(field[h.x + ShiftX + x, h.y + ShiftY + y].ch)
         end;
     ShowHero(h);
-    ShowRats(r, h)
+    ShowRats(r, h);
+    WriteStatusBar(h);
 end;
 
 function IsBarrierUnit (block: FieldBlock): boolean;
@@ -258,31 +259,31 @@ end;
 
 procedure MoveHero(var h: hero; var r: ArrayRats; var field: Gfield; x, y: integer; ShiftX, ShiftY: integer);
 begin
+    case x of
+    -1: h.duration := HdLeft;
+    1: h.duration := HdRight;
+    end;
+    case y of
+    -1: h.duration := HdUp;
+    1: h.duration := HdDown;
+    end;
+    if ((y = -1) or (x = -1)) and (ord(h.condition) > 2) then
+        h.condition := HcBackFirst
+    else if ((y = 1) or (x = 1)) and (ord(h.condition) < 3) then begin
+        h.condition := HcFrontFirst;
+        h.BlinkTimer := now
+    end
+    else if ord(h.condition) mod 3 = 0 then
+        h.condition := succ(h.condition) 
+    else
+        h.condition := pred(h.condition);
     if not IsBarrier(h, field, x, y) then begin
         InitHeroAttend(h, field, 0);
         h.x := h.x + x;
         h.y := h.y + y;
-        case x of
-        -1: h.duration := HdLeft;
-        1: h.duration := HdRight;
-        end;
-        case y of
-        -1: h.duration := HdUp;
-        1: h.duration := HdDown;
-        end;
-        if ((y = -1) or (x = -1)) and (ord(h.condition) > 2) then
-            h.condition := HcBackFirst
-        else if ((y = 1) or (x = 1)) and (ord(h.condition) < 3) then begin
-            h.condition := HcFrontFirst;
-            h.BlinkTimer := now
-        end
-        else if ord(h.condition) mod 3 = 0 then
-            h.condition := succ(h.condition) 
-        else
-            h.condition := pred(h.condition);
         InitHeroAttend(h, field, HeroSN);
-        RewriteField(field, h, r, ShiftX, ShiftY);
-    end
+    end;
+    RewriteField(field, h, r, ShiftX, ShiftY)
 end;
 
 function CheckRatBarrierX(var r: rat; field: Gfield; ShiftX: integer): boolean;
@@ -355,9 +356,11 @@ begin
         else if x = 1 then
             r.Duration := RatPrintRight;
         InitRatAttend(r, field, RatSN);
-        ShowRat(r, h)
+        ShowRat(r, h);
+        GotoXY(1, 1)
     end
 end;
+
 
 procedure RewritePartField(var field: Gfield; var h: Hero; var r: ArrayRats; ShiftX, ShiftY: integer);
 var
@@ -374,7 +377,8 @@ begin
         end
     end;
     ShowHero(h);
-    ShowRats(r, h)
+    ShowRats(r, h);
+    GotoXY(1, 1)
 end;
 
 function CheckDuration(var h: hero; var r:ArrayRats): integer;

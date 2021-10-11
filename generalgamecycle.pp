@@ -40,8 +40,6 @@ begin
         RtUp: MoveRat(r[who], h, field, 0, -1);
         RtDown: MoveRat(r[who], h, field, 0, 1)
         end;
-        GotoXY(1, 1);
-        write('x: ', h.x, '  ', 'y: ', h.y, '       ')
     end
 end;
 
@@ -95,6 +93,7 @@ begin
     for l := 1 to RatCount do
         InitRatAttend(rats[l],field, RatSN);
     RewriteField(field, h, rats, ShiftFieldX, ShiftFieldY);
+    WriteStatusBar(h);
     while true do begin
         DoFromQueue(TStack, h, rats, field, ShiftFieldX, ShiftFieldY);
         DoRatsTurn(h, TStack, rats);
@@ -109,7 +108,9 @@ begin
             HitButton: DoHit(Tstack, h, rats);
             EndButton: ToEndGame;
             end
-        end
+        end;
+        if h.HealthPoint = 0 then
+            GameOver
     end
 end;
 

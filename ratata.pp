@@ -23,6 +23,7 @@ procedure ShowRats(var rats: ArrayRats; var h: hero);
 procedure ShowRat(var r: rat; var h: hero);
 procedure DoRatsTurn(var h: hero; var stack: TaskStack; var rats: ArrayRats);
 function IsInsideVision(x, y: integer): boolean;
+function IsHitRatDistantion(var r: rat; var h: hero): boolean;
 
 implementation
 uses crt, DateUtils;
@@ -56,7 +57,7 @@ end;
 function IsInsideVision(x, y: integer): boolean;
 begin
     IsInsideVision := (x > 0) and (x <= ScreenWidth) and
-        (y > 0) and (y < ScreenHeight)
+        (y > 1) and (y < ScreenHeight)
 end;
 
 procedure ShowRats(var rats: ArrayRats; var h: hero);
@@ -80,6 +81,34 @@ begin
     end
 end;
 
+function IsHitRatDistantion(var r: rat; var h: hero): boolean;
+var
+    yb, xb: boolean;
+    x, y: integer;
+begin
+    for y := (h.y - 1) to (h.y + 2) do
+        if y = r.y then begin
+            yb := true;
+            break
+        end;
+    xb := (r.x = h.x - 7) or (r.x = h.x + 2);
+    if yb and xb then begin
+        IsHitRatDistantion := true;
+        exit
+    end;
+    for x := (h.x - 5) to (h.x + 0) do
+        if x = r.x then begin
+            xb := true; 
+            break
+        end;
+    yb := (r.y = h.y - 2) or (r.y = h.y + 3);
+    if yb and xb then begin
+        IsHitRatDistantion := true;
+        exit
+    end;
+    IsHitRatDistantion := false
+end;
+
 procedure DoRatsTurn(var h: hero; var stack: TaskStack; var rats: ArrayRats);
 var
     t: TDateTime;
@@ -88,9 +117,9 @@ var
     x, y: integer;
 begin
     for i := 1 to RatCount do begin
+        t := now;
         if rats[i].IsLived then begin
-            t := now;
-            if MillisecondsBetween(rats[i].MoveTimer, t) > 1800 then begin
+            if MillisecondsBetween(rats[i].MoveTimer, t) > 1000 then begin
                 rats[i].MoveTimer := t;
                 if rats[i].IsAgression = false then begin
                     choice := random;
@@ -105,6 +134,10 @@ begin
                 end
                 else begin
                     x := rats[i].x - h.x;
+                    if IsHitRatDistantion(rats[i], h) then begin
+                        h.HealthPoint := h.HealthPoint - 1;
+                        WriteStatusBar(h)
+                    end;
                     if x < 0 then
                         TsPush(stack, RtRight, i)
                     else

@@ -3,6 +3,7 @@ unit MovPrintHero;                      {movprinthero.pp}
 interface
 uses SysUtils;
 const
+    MaxHealthPoint = 10;
     HStringCount = 4;
     LenghtHeroString = 9;
     LeftHeroBorder = -4;
@@ -26,6 +27,8 @@ type
     HeroMapPrinting = array[0..7, 1..HStringCount] of integer;
 
     Hero = record
+        name: string[15];
+        HealthPoint: byte;
         CenXfield, CenX, CenY: integer;
         HCondList: HeroConditionsList; 
         x, y: integer;
@@ -42,12 +45,15 @@ procedure HeroInit(var h: Hero);
 procedure HeroConditionListInit(var h: Hero);
 procedure HeroMapPrintingInit(var h: Hero);
 procedure ShowHero(var h: Hero);
+procedure WriteStatusBar(var h: hero);
 
 implementation
 uses crt, StartEndGame, MovPrintChar, GameField;
 
 procedure HeroInit(var h: Hero);
 begin
+    h.name := 'Hero';
+    h.HealthPoint := MaxHealthPoint;
     h.CenXfield := ScreenWidth div 2;
     h.CenX := (ScreenWidth - LenghtHeroString) div 2;
     h.CenY := ScreenHeight div 2;
@@ -141,6 +147,25 @@ begin
         g := g + 1
     end;
     GotoXY(1, 1)
+end;
+
+procedure WriteStatusBar(var h: hero);
+var
+    i: integer;
+begin
+        GotoXY(1, 1);
+        write('   ',h.name, '     ');
+        TextColor(Red);
+        for i := 1 to MaxHealthPoint do 
+            if i <= h.HealthPoint then
+                write('<3 ')
+            else
+                write('   ');
+            
+        TextColor(LightGray);
+        write('       ');
+        write('x: ', h.x, '  ', 'y: ', h.y, '       ');
+        GotoXY(1, 1)
 end;
 
 end.

@@ -3,6 +3,7 @@ unit StartEndGame;             {startendgame.pp}
 interface
 procedure ToEndGame;
 procedure ToStartGame;
+procedure GameOver;
 
 implementation
 uses crt, MovPrintChar;
@@ -15,6 +16,7 @@ const
     MenuShift = -32;                        {x-axis offset for menu item}
     SwitchCount = 2;                        {count of menu item}
     DefaultEsc = #27'[0m';                  {esc-seq default settings}
+    GaOv = 'Game Over';
 type
     actions = (StartGame, ExitGame);        {enable menu items}
 
@@ -68,6 +70,16 @@ begin
     clrscr;
     write(DefaultEsc);            {esc-sequence for defaultsettings}
     halt
+end;
+
+procedure GameOver;
+begin
+    clrscr;
+    GotoXY((ScreenWidth - length(GaOV)) div 2, ScreenHeight div 2);
+    write(GaOv);
+    GotoXY(1, 1);
+    delay(3000);
+    ToEndGame
 end;
 
 {procedure RedrawAsterisk;}
