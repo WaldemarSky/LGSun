@@ -12,7 +12,7 @@ const
 procedure GeneralCycle;
 
 implementation
-uses crt, SysUtils, DateUtils, StartEndGame, MovPrintHero, MovPrintChar, TaskStackUnit, GameField, Ratata;
+uses crt, SysUtils, DateUtils, StartEndGame, MovPrintHero, MovPrintChar, TaskStackUnit, GameField, Ratata, Npc;
 
 procedure DoHit(var stack: TaskStack; var h: hero; var r: ArrayRats);
 begin
@@ -75,6 +75,7 @@ var
     TStack: TaskStack;
     field: GField;
     rats: ArrayRats;
+    npc: Sage;
     ShiftFieldX: integer;
     ShiftFieldY: integer;
     l: integer;
@@ -92,12 +93,14 @@ begin
     ArrayRatsInit(rats);
     for l := 1 to RatCount do
         InitRatAttend(rats[l],field, RatSN);
+    NpcInit(npc, field);
     RewriteField(field, h, rats, ShiftFieldX, ShiftFieldY);
     WriteStatusBar(h);
     while true do begin
         DoFromQueue(TStack, h, rats, field, ShiftFieldX, ShiftFieldY);
         DoRatsTurn(h, TStack, rats);
         DoBlinkHero(h);
+        BlinkNpc(npc, h, field);
         if KeyPressed then begin
             GetKey(c);
             case c of

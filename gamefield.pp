@@ -21,12 +21,12 @@ type
     GField = array [StartX..WorldWidth] of
         array [StartY..WorldHeight] of FieldBlock;
 
-
 procedure GFieldInit(var field: Gfield);
 procedure InitRatAttend(var r: rat; var field: Gfield; attend: byte);
 procedure InitHeroAttend(var h: hero; var field: Gfield; attend: byte);
 procedure MoveHero(var h: hero; var r: ArrayRats; var field: Gfield; x, y: integer; ShiftX, ShiftY: integer);
 procedure RewriteField(var field: Gfield; var h: Hero; var r: ArrayRats; ShiftX, ShiftY: integer);
+procedure RewriteAreaField(var field: Gfield; var h: hero; StartX, StartY, EndX, EndY: integer);
 procedure MoveRat(var r: rat; var h: hero; var field: Gfield; x, y: integer);
 procedure HitHero(var h: Hero; var field: Gfield; var r: ArrayRats; ShiftX, ShiftY: integer);
 procedure EndHitHero(var h: Hero; var field: Gfield; var stack: TaskStack; var r: ArrayRats; ShiftX, ShiftY: integer);
@@ -191,6 +191,26 @@ begin
     ShowHero(h);
     ShowRats(r, h);
     WriteStatusBar(h);
+end;
+
+function IsInsideVision(x, y: integer): boolean;
+begin
+    IsInsideVision := (x > 0) and (x <= ScreenWidth) and
+        (y > 1) and (y < ScreenHeight)
+end;
+
+procedure RewriteAreaField(var field: Gfield; var h: hero; StartX, StartY, EndX, EndY: integer);
+var
+    x, y: integer;
+begin
+    for y := StartY to EndY do
+        for x := StartX to EndX do begin
+            if IsInsideVision(x - h.x + h.CenXfield, y - h.y + h.CenY) then begin
+                GotoXY(x - h.x + h.CenXfield, y - h.y + h.CenY);
+                write(field[x, y].ch);
+            end
+        end;
+    GotoXY(1, 1)
 end;
 
 function IsBarrierUnit (block: FieldBlock): boolean;
