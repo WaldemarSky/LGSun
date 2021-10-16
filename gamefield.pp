@@ -1,7 +1,7 @@
 unit GameField;                      {gamefield.pp}
 
 interface
-uses MovPrintHero, Ratata, TaskStackUnit;
+uses MovPrintHero, Ratata, TaskStackUnit, Lanterns;
 const
     StartX = -200;
     StartY = -200;
@@ -10,10 +10,15 @@ const
     ObjectsCount = 1;
     HeroSN = 1;
     RatSN = 2;
+    CountBgStr = 2;
+    LengthBgStr = 8;
 
 type
     FieldBlock = record
         ch: char;
+        InsidePoint: boolean;
+        LightPoint: byte;
+        clr: byte;
         barrier: boolean;
         attend: byte;
     end;
@@ -21,7 +26,9 @@ type
     GField = array [StartX..WorldWidth] of
         array [StartY..WorldHeight] of FieldBlock;
 
-procedure GFieldInit(var field: Gfield);
+    TextureArray = array [1..CountBgStr] of string[LengthBgStr];
+
+procedure GFieldInit(var field: Gfield; var TxArray: TextureArray; var Lstack: LanternStack);
 procedure InitRatAttend(var r: rat; var field: Gfield; attend: byte);
 procedure InitHeroAttend(var h: hero; var field: Gfield; attend: byte);
 procedure MoveHero(var h: hero; var r: ArrayRats; var field: Gfield; x, y: integer; ShiftX, ShiftY: integer);
@@ -57,21 +64,19 @@ begin
             continue
         end;
         pos := pos + 1;
-        if ch = ' ' then
-            continue;
-        field[x+pos, y+str].ch := ch;
-        field[x+pos, y+str].attend := 0;
-        case BarrierFlag of
-        true: field[x+pos, y+str].barrier := true;
-        false: field[x+pos, y+str].barrier := false
+        if (field[x+pos, y+str].InsidePoint) or (ch = '#') then begin
+            field[x+pos, y+str].ch := ch;
+            field[x+pos, y+str].attend := 0;
+            field[x+pos, y+str].barrier := BarrierFlag
         end
     end
 end;
-procedure InitComplexObject(var field: Gfield; FileName: string; x, y: integer);
+
+procedure InitComplexObject(var field: Gfield; var lstack: LanternStack; FileName: string; x, y: integer);
 var
     Xshift, Yshift: integer;
     ch: integer;
-    bool: integer;
+    bool, lightbool: integer;
     f: text;
 begin
     {$I-}
@@ -86,19 +91,101 @@ begin
         read(f, Yshift);
         read(f, ch);
         read(f, bool);
+        read(f, lightbool);
         field[x+Xshift, y+Yshift].ch := char(ch);
         field[x+Xshift, y+Yshift].attend := 0;
         case bool of
         0: field[x+Xshift, y+Yshift].barrier := false;
         1: field[x+Xshift, y+Yshift].barrier := true;
+        end;
+        if lightbool = 1 then
+            LSPush(lstack, x+Xshift, y+Yshift);
+    end
+end;
+
+function CheckFieldInside(var field: Gfield; x, y: integer): boolean;
+var
+    CurLeftX, CurRightX, CurUpY, CurDownY: integer;
+    LeftBool, RightBool, UpBool, DownBool: boolean;
+begin
+    if field[x, y].barrier then
+        CheckFieldInside := false
+    else begin
+        LeftBool := false;
+        RightBool := false;
+        UpBool := false;
+        DownBool := false;
+        CurLeftX := x;
+        CurRightX := x;
+        CurUpY := y;
+        CurDownY := y;
+        while true do begin
+            if not LeftBool then begin
+                CurLeftX := CurLeftX - 1;
+                if CurLeftX < StartX  then begin
+                    CheckFieldInside := false;
+                    exit
+                end
+                else if field[CurLeftX, y].barrier then begin
+                    LeftBool := true
+                end
+            end;
+            if not RightBool then begin
+                CurRightX := CurRightX + 1;
+                if CurRightX > WorldWidth then begin
+                    CheckFieldInside := false;
+                    exit
+                end
+                else if field[CurRightX, y].barrier then begin
+                    RightBool := true
+                end
+            end;
+            if not UpBool then begin
+                CurUpY := CurUpY - 1;
+                if CurUpY < StartY  then begin
+                    CheckFieldInside := false;
+                    exit
+                end
+                else if field[x, CurUpY].barrier then begin
+                    UpBool := true
+                end
+            end;
+            if not DownBool then begin
+                CurDownY := CurDownY + 1;
+                if CurDownY  > WorldHeight then begin
+                    CheckFieldInside := false;
+                    exit
+                end
+                else if field[x, CurDownY].barrier then begin
+                    DownBool:= true
+                end
+            end;
+            if RightBool and LeftBool and UpBool and DownBool then begin
+                CheckFieldInside := true;
+                exit
+            end
         end
     end
 end;
+
+procedure InitInOutPoint(var field: Gfield);
+var
+    x, y: integer;
+begin
+    for y := StartY to WorldHeight do
+        for x := StartX to WorldWidth do
+            if CheckFieldInside(field, x, y) then
+                field[x, y].InsidePoint := true
+            else
+                field[x, y].InsidePoint := false
+end;
+
 
 procedure InitBorder(var field: Gfield);
 var
     f: text;
     x, y: integer;
+    PrevX, PrevY: integer;
 begin
     {$I-}
     assign(f, 'worldobjects/border.txt');
@@ -107,49 +194,123 @@ begin
         writeln('Could not open border.txt');
         halt(1)
     end;
+    PrevX := -1000;
+    PrevY := -1000;
     while not SeekEof(f) do begin
         read(f, x);
         read(f, y);
         field[x, y].ch := '/';
         field[x, y].barrier := true;
         field[x, y].attend := 0;
-    end
+        if PrevY = y then
+            field[(x + PrevX) div 2, y].barrier := true;
+        PrevX := x;
+        PrevY := y
+    end;
+    field[34, -11].barrier := true;
+    field[-30, 8].barrier := true;
 end;
 
-procedure InitRatAttend(var r: rat; var field: Gfield; attend: byte);
-var
-    i: integer;
-begin
-    for i := 0 to 3 do
-        field[r.x + i, r.y].attend := attend 
-end;
-
-procedure GFieldInit(var field: Gfield);
+procedure CompLightColor(var field: Gfield);
 var
     x, y: integer;
 begin
     for y := StartY to WorldHeight do
+        for x := StartX to WorldWidth do
+            case field[x,y].LightPoint of
+            0: field[x, y].clr := Black;
+            1: field[x, y].clr := DarkGray;
+            2: field[x, y].clr := LightGray;
+            else field[x, y].clr := White;
+            end
+end;
+function CompDistance(StartX, x, StartY, y: integer): real;
+var
+    DistX, DistY: integer;
+begin
+    DistX := abs(StartX - x);
+    DistY := abs(StartY - y) * 2;
+    CompDistance := sqrt(sqr(DistX) + sqr(DistY))
+end;
+
+
+procedure InitLighting(var field: Gfield; var Lstack: LanternStack);
+var
+    tmp: LanternPtr;
+    Dist: real;
+    x, y: integer;
+begin
+    tmp := Lstack;
+    while tmp <> nil do begin
+        for y := (tmp^.y - 8) to (tmp^.y + 8) do
+            for x := (tmp^.x - 17) to (tmp^.x +17) do begin
+                Dist := CompDistance(tmp^.x, x, tmp^.y, y);
+                if Dist <= 4 then
+                    field[x, y].LightPoint := field[x, y].LightPoint + 3
+                else if (Dist > 4) and (Dist <= 8) then
+                    field[x, y].LightPoint := field[x, y].LightPoint + 2
+                else if (Dist > 8) and (Dist <= 14) then
+                    field[x, y].LightPoint := field[x, y].LightPoint + 1
+            end;
+        tmp := tmp^.next
+    end;
+    CompLightColor(field)
+end;
+
+
+procedure InitTextureBg(var TxArray: TextureArray); 
+begin
+    TxArray[1] := '`   `   ';
+    TxArray[2] := '  `   ` ';
+end;
+
+procedure GFieldInit(var field: Gfield; var TxArray: TextureArray; var Lstack: LanternStack);
+var
+    x, y: integer;
+    BgX, BgY: integer;
+    f: text;
+begin
+    assign(f, 'testing.txt');
+    rewrite(f);
+    for y := StartY to WorldHeight do
         for x := StartX to WorldWidth do begin
             field[x, y].ch := ' ';
+            field[x, y].LightPoint := 0;
             field[x, y].barrier := false;
             field[x, y].attend := 0;
         end;
 
+    InitBorder(field);
+    InitObject(field, 'borderworld.txt', 188, -27, true);
+    InitInOutPoint(field);
+    InitTextureBg(TxArray); 
+
+    for y := StartY to WorldHeight do
+        for x := StartX to WorldWidth do begin
+            if field[x, y].InsidePoint then begin
+                BgX := (x+201) mod LengthBgStr + 1;
+                BgY := (y+201) mod CountBgStr+ 1;
+                writeln(f, x, ' ', y, ':', BgX, ' ', BgY );
+                field[x, y].ch := TxArray[BgY, BgX]
+            end
+        end;
+    
     InitObject(field, 'wallhome1.txt', -33, -6, true);
     InitObject(field, 'wallhome2.txt', 11, -6, true);
     InitObject(field, 'bed.txt', 5, 5, true);
-    InitComplexObject(field, 'lantern.txt', 21, 0);
-    InitComplexObject(field, 'lantern.txt', -7, 2);
-    InitComplexObject(field, 'lantern.txt', 25, -10);
-    InitComplexObject(field, 'lantern.txt', 52, -18);
-    InitComplexObject(field, 'lantern.txt', 92, -15);
-    InitComplexObject(field, 'lantern.txt', 88, -35);
-    InitComplexObject(field, 'lantern.txt', 23, -39);
-    InitObject(field, 'borderworld.txt', 188, -27, true);
+    InitComplexObject(field, Lstack, 'lantern.txt', 21, 0);
+    InitComplexObject(field, Lstack, 'lantern.txt', -7, 2);
+    InitComplexObject(field, Lstack, 'lantern.txt', 25, -10);
+    InitComplexObject(field, Lstack, 'lantern.txt', 52, -18);
+    InitComplexObject(field, Lstack, 'lantern.txt', 92, -15);
+    InitComplexObject(field, Lstack, 'lantern.txt', 88, -35);
+    InitComplexObject(field, Lstack, 'lantern.txt', 23, -39);
+    InitComplexObject(field, Lstack, 'lantern.txt', 183, -24);
     InitObject(field, 'water.txt', 112, -30, true);
     InitObject(field, 'bridge.txt', 112, -22, false);
+    InitComplexObject(field, Lstack, 'minilantern.txt', 129, -22);
 
-    InitBorder(field)
+    InitLighting(field, Lstack)
 end;
 
 procedure RewriteField(var field: Gfield; var h: Hero; var r: ArrayRats; ShiftX, ShiftY: integer);
@@ -159,16 +320,19 @@ begin
     for y := 2 to (ScreenHeight div 2 - 2) do
         for x := 1 to ScreenWidth do begin 
             GotoXY(x, y);
+            TextColor(field[h.x + ShiftX + x, h.y + ShiftY + y].clr);
             write(field[h.x + ShiftX + x, h.y + ShiftY + y].ch)
         end;
 
     for y := (ScreenHeight div 2 - 1) to (ScreenHeight div 2 + 1) do begin
         for x := 1 to ScreenWidth div 2 - 4 do begin 
             GotoXY(x, y);
+            TextColor(field[h.x + ShiftX + x, h.y + ShiftY + y].clr);
             write(field[h.x + ShiftX + x, h.y + ShiftY + y].ch)
         end;
         for x := (ScreenWidth div 2 + 2) to ScreenWidth do begin 
             GotoXY(x, y);
+            TextColor(field[h.x + ShiftX + x, h.y + ShiftY + y].clr);
             write(field[h.x + ShiftX + x, h.y + ShiftY + y].ch)
         end
     end;
@@ -176,27 +340,24 @@ begin
     y := ScreenHeight div 2 + 2;
     for x := 1 to ScreenWidth div 2 - 3 do begin 
         GotoXY(x, y);
+        TextColor(field[h.x + ShiftX + x, h.y + ShiftY + y].clr);
         write(field[h.x + ShiftX + x, h.y + ShiftY + y].ch)
     end;
     for x := (ScreenWidth div 2 + 1) to ScreenWidth do begin 
         GotoXY(x, y);
+        TextColor(field[h.x + ShiftX + x, h.y + ShiftY + y].clr);
         write(field[h.x + ShiftX + x, h.y + ShiftY + y].ch)
     end;
 
     for y := (ScreenHeight div 2 + 3) to ScreenHeight-1 do
         for x := 1 to ScreenWidth do begin 
             GotoXY(x, y);
+            TextColor(field[h.x + ShiftX + x, h.y + ShiftY + y].clr);
             write(field[h.x + ShiftX + x, h.y + ShiftY + y].ch)
         end;
     ShowHero(h);
     ShowRats(r, h);
     WriteStatusBar(h);
-end;
-
-function IsInsideVision(x, y: integer): boolean;
-begin
-    IsInsideVision := (x > 0) and (x <= ScreenWidth) and
-        (y > 1) and (y < ScreenHeight)
 end;
 
 procedure RewriteAreaField(var field: Gfield; var h: hero; StartX, StartY, EndX, EndY: integer);
@@ -207,10 +368,25 @@ begin
         for x := StartX to EndX do begin
             if IsInsideVision(x - h.x + h.CenXfield, y - h.y + h.CenY) then begin
                 GotoXY(x - h.x + h.CenXfield, y - h.y + h.CenY);
-                write(field[x, y].ch);
+                TextColor(field[x, y].clr);
+                write(field[x, y].ch)
             end
         end;
     GotoXY(1, 1)
+end;
+
+procedure InitRatAttend(var r: rat; var field: Gfield; attend: byte);
+var
+    i: integer;
+begin
+    for i := 0 to 3 do
+        field[r.x + i, r.y].attend := attend 
+end;
+
+function IsInsideVision(x, y: integer): boolean;
+begin
+    IsInsideVision := (x > 0) and (x <= ScreenWidth) and
+        (y > 1) and (y < ScreenHeight)
 end;
 
 function IsBarrierUnit (block: FieldBlock): boolean;

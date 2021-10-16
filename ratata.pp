@@ -3,7 +3,7 @@ unit Ratata;                    {rat.pp}
 interface
 uses MovPrintHero, SysUtils, TaskStackUnit;
 const
-    RatCount = 3;
+    RatCount = 5;
     RatPrintLeft = ',^@/';
     RatPrintRight = '\@^,';
 type
@@ -51,7 +51,23 @@ begin
     rats[3].y := -54;
     rats[3].MoveTimer := Now;
     rats[3].Duration := RatPrintLeft;
-    rats[3].IsAgression := false
+    rats[3].IsAgression := false;
+
+    rats[4].IsLived := true;
+    rats[4].HealthPoint := 3;
+    rats[4].x := 57;
+    rats[4].y := -54;
+    rats[4].MoveTimer := Now;
+    rats[4].Duration := RatPrintLeft;
+    rats[4].IsAgression := false;
+
+    rats[5].IsLived := true;
+    rats[5].HealthPoint := 3;
+    rats[5].x := 57;
+    rats[5].y := -54;
+    rats[5].MoveTimer := Now;
+    rats[5].Duration := RatPrintLeft;
+    rats[5].IsAgression := false
 end;
 
 function IsInsideVision(x, y: integer): boolean;

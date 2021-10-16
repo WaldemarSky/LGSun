@@ -12,7 +12,8 @@ const
 procedure GeneralCycle;
 
 implementation
-uses crt, SysUtils, DateUtils, StartEndGame, MovPrintHero, MovPrintChar, TaskStackUnit, GameField, Ratata, Npc;
+uses crt, SysUtils, DateUtils, StartEndGame, MovPrintHero,
+    MovPrintChar, TaskStackUnit, Lanterns, GameField, Ratata, Npc;
 
 procedure DoHit(var stack: TaskStack; var h: hero; var r: ArrayRats);
 begin
@@ -73,7 +74,9 @@ var
     c: integer;
     h: Hero;
     TStack: TaskStack;
+    LStack: LanternStack;
     field: GField;
+    TxArray: TextureArray;
     rats: ArrayRats;
     npc: Sage;
     ShiftFieldX: integer;
@@ -85,7 +88,8 @@ begin
     ShiftFieldX := -ScreenWidth div 2;
     ShiftFieldY := -ScreenHeight div 2;
     TSInit(TStack);
-    GFieldInit(field);
+    LSInit(Lstack);
+    GFieldInit(field, TxArray, LStack);
     HeroInit(h);
     HeroConditionListInit(h);
     HeroMapPrintingInit(h);

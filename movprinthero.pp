@@ -154,6 +154,7 @@ var
     i: integer;
 begin
         GotoXY(1, 1);
+        TextColor(White);
         write('   ',h.name, '     ');
         TextColor(Red);
         for i := 1 to MaxHealthPoint do 
