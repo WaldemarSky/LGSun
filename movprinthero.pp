@@ -32,6 +32,7 @@ type
         CenXfield, CenX, CenY: integer;
         HCondList: HeroConditionsList; 
         x, y: integer;
+        FlamePoint: boolean;
         duration: HeroDuration;
         condition: HeroCondition;
         PrintMap: HeroMapPrinting;
@@ -44,7 +45,6 @@ type
 procedure HeroInit(var h: Hero);
 procedure HeroConditionListInit(var h: Hero);
 procedure HeroMapPrintingInit(var h: Hero);
-procedure ShowHero(var h: Hero);
 procedure WriteStatusBar(var h: hero);
 
 implementation
@@ -57,8 +57,9 @@ begin
     h.CenXfield := ScreenWidth div 2;
     h.CenX := (ScreenWidth - LenghtHeroString) div 2;
     h.CenY := ScreenHeight div 2;
-    h.x := 0; 
-    h.y := 0;
+    h.x := 13; 
+    h.y := 3;
+    h.FlamePoint := false;
     h.duration := HdDown;
     h.condition := HcFrontFirst;
     h.BlinkTimer := now;
@@ -134,19 +135,6 @@ begin
 
     h.PrintMap[7][1] := 2; h.PrintMap[7][2] := 2;
     h.PrintMap[7][3] := 2; h.PrintMap[7][4] := 3
-end;
-
-procedure ShowHero(var h: Hero);
-var
-    i, g: integer;
-begin
-    g := 1;
-    for i := -1 to 2 do begin
-        GotoXY(h.CenX + h.PrintMap[ord(h.condition), g], h.CenY+i);
-        write(h.HCondList[h.condition, g]);
-        g := g + 1
-    end;
-    GotoXY(1, 1)
 end;
 
 procedure WriteStatusBar(var h: hero);

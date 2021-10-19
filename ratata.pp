@@ -3,7 +3,7 @@ unit Ratata;                    {rat.pp}
 interface
 uses MovPrintHero, SysUtils, TaskStackUnit;
 const
-    RatCount = 5;
+    RatCount = 7;
     RatPrintLeft = ',^@/';
     RatPrintRight = '\@^,';
 type
@@ -19,8 +19,6 @@ type
     ArrayRats = array [1..RatCount] of rat;
 
 procedure ArrayRatsInit(var rats: ArrayRats);
-procedure ShowRats(var rats: ArrayRats; var h: hero);
-procedure ShowRat(var r: rat; var h: hero);
 procedure DoRatsTurn(var h: hero; var stack: TaskStack; var rats: ArrayRats);
 function IsInsideVision(x, y: integer): boolean;
 function IsHitRatDistantion(var r: rat; var h: hero): boolean;
@@ -30,7 +28,7 @@ uses crt, DateUtils;
 procedure ArrayRatsInit(var rats: ArrayRats);
 begin
     rats[1].IsLived := true;
-    rats[1].HealthPoint := 7;
+    rats[1].HealthPoint := 3;
     rats[1].x := 40;
     rats[1].y := -40;
     rats[1].MoveTimer := Now;
@@ -63,11 +61,27 @@ begin
 
     rats[5].IsLived := true;
     rats[5].HealthPoint := 3;
-    rats[5].x := 57;
-    rats[5].y := -54;
+    rats[5].x := 93;
+    rats[5].y := -30;
     rats[5].MoveTimer := Now;
     rats[5].Duration := RatPrintLeft;
-    rats[5].IsAgression := false
+    rats[5].IsAgression := false;
+
+    rats[6].IsLived := true;
+    rats[6].HealthPoint := 3;
+    rats[6].x := 97;
+    rats[6].y := -16;
+    rats[6].MoveTimer := Now;
+    rats[6].Duration := RatPrintLeft;
+    rats[6].IsAgression := false;
+
+    rats[7].IsLived := true;
+    rats[7].HealthPoint := 3;
+    rats[7].x := 93;
+    rats[7].y := -15;
+    rats[7].MoveTimer := Now;
+    rats[7].Duration := RatPrintLeft;
+    rats[7].IsAgression := false
 end;
 
 function IsInsideVision(x, y: integer): boolean;
@@ -76,26 +90,6 @@ begin
         (y > 1) and (y < ScreenHeight)
 end;
 
-procedure ShowRats(var rats: ArrayRats; var h: hero);
-var
-    i: integer;
-begin
-    for i := 1 to RatCount do
-        if rats[i].IsLived then
-            ShowRat(rats[i], h);
-end;
-
-procedure ShowRat(var r: rat; var h: hero);
-var
-    x, y: integer;
-begin
-    x := h.CenXField + r.x - h.x;
-    y := h.CenY + r.y - h.y;
-    if IsInsideVision(x, y) then begin
-        GotoXY(x, y);
-        write(r.Duration)
-    end
-end;
 
 function IsHitRatDistantion(var r: rat; var h: hero): boolean;
 var

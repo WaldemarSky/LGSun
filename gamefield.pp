@@ -18,6 +18,7 @@ type
         ch: char;
         InsidePoint: boolean;
         LightPoint: byte;
+        LightHeroPoint: byte;
         clr: byte;
         barrier: boolean;
         attend: byte;
@@ -29,8 +30,12 @@ type
     TextureArray = array [1..CountBgStr] of string[LengthBgStr];
 
 procedure GFieldInit(var field: Gfield; var TxArray: TextureArray; var Lstack: LanternStack);
+procedure ShowHero(var h: Hero; var field: Gfield);
 procedure InitRatAttend(var r: rat; var field: Gfield; attend: byte);
 procedure InitHeroAttend(var h: hero; var field: Gfield; attend: byte);
+procedure InitHeroLight(var h: hero; var field: Gfield);
+procedure ShowRat(var r: rat; var h: hero; var field: Gfield);
+procedure ShowRats(var rats: ArrayRats; var h: hero; var field: Gfield);
 procedure MoveHero(var h: hero; var r: ArrayRats; var field: Gfield; x, y: integer; ShiftX, ShiftY: integer);
 procedure RewriteField(var field: Gfield; var h: Hero; var r: ArrayRats; ShiftX, ShiftY: integer);
 procedure RewriteAreaField(var field: Gfield; var h: hero; StartX, StartY, EndX, EndY: integer);
@@ -67,7 +72,10 @@ begin
         if (field[x+pos, y+str].InsidePoint) or (ch = '#') then begin
             field[x+pos, y+str].ch := ch;
             field[x+pos, y+str].attend := 0;
-            field[x+pos, y+str].barrier := BarrierFlag
+            if ch = ' ' then
+                field[x+pos, y+str].barrier := false
+            else
+                field[x+pos, y+str].barrier := BarrierFlag
         end
     end
 end;
@@ -214,15 +222,18 @@ end;
 procedure CompLightColor(var field: Gfield);
 var
     x, y: integer;
+    lp: byte;
 begin
     for y := StartY to WorldHeight do
-        for x := StartX to WorldWidth do
-            case field[x,y].LightPoint of
+        for x := StartX to WorldWidth do begin
+            lp :=  field[x, y].LightPoint + field[x, y].LightHeroPoint;
+            case lp of
             0: field[x, y].clr := Black;
             1: field[x, y].clr := DarkGray;
             2: field[x, y].clr := LightGray;
             else field[x, y].clr := White;
             end
+        end;
 end;
 function CompDistance(StartX, x, StartY, y: integer): real;
 var
@@ -245,14 +256,43 @@ begin
         for y := (tmp^.y - 8) to (tmp^.y + 8) do
             for x := (tmp^.x - 17) to (tmp^.x +17) do begin
                 Dist := CompDistance(tmp^.x, x, tmp^.y, y);
-                if Dist <= 4 then
-                    field[x, y].LightPoint := field[x, y].LightPoint + 3
+                if Dist <= 4 then begin
+                    field[x, y].LightPoint := field[x, y].LightPoint + 3;
+                end
                 else if (Dist > 4) and (Dist <= 8) then
                     field[x, y].LightPoint := field[x, y].LightPoint + 2
-                else if (Dist > 8) and (Dist <= 14) then
+                else if (Dist > 8) and (Dist <= 15) then
                     field[x, y].LightPoint := field[x, y].LightPoint + 1
             end;
         tmp := tmp^.next
+    end;
+    CompLightColor(field)
+end;
+
+procedure InitHeroLight(var h: hero; var field: Gfield);
+var
+    x, y: integer;
+    Dist: real;
+begin
+    case h.FlamePoint of
+    true: begin
+        for y := (h.y - 10) to (h.y + 10) do
+            for x := (h.x - 20) to (h.x + 20) do begin
+                Dist := CompDistance(h.x, x, h.y, y);
+                if Dist <= 4 then
+                    field[x, y].LightHeroPoint := 3
+                else if (Dist > 4) and (Dist <= 8) then
+                    field[x, y].LightHeroPoint := 2
+                else if (Dist > 8) and (Dist <= 14) then
+                    field[x, y].LightHeroPoint := 1
+                else
+                    field[x, y].LightHeroPoint := 0
+            end;
+    end;
+    false:
+        for y := (h.y - 10) to (h.y + 10) do
+            for x := (h.x - 20) to (h.x + 20) do
+                field[x, y].LightHeroPoint := 0
     end;
     CompLightColor(field)
 end;
@@ -268,14 +308,12 @@ procedure GFieldInit(var field: Gfield; var TxArray: TextureArray; var Lstack: L
 var
     x, y: integer;
     BgX, BgY: integer;
-    f: text;
 begin
-    assign(f, 'testing.txt');
-    rewrite(f);
     for y := StartY to WorldHeight do
         for x := StartX to WorldWidth do begin
             field[x, y].ch := ' ';
             field[x, y].LightPoint := 0;
+            field[x, y].LightHeroPoint := 0;
             field[x, y].barrier := false;
             field[x, y].attend := 0;
         end;
@@ -290,7 +328,6 @@ begin
             if field[x, y].InsidePoint then begin
                 BgX := (x+201) mod LengthBgStr + 1;
                 BgY := (y+201) mod CountBgStr+ 1;
-                writeln(f, x, ' ', y, ':', BgX, ' ', BgY );
                 field[x, y].ch := TxArray[BgY, BgX]
             end
         end;
@@ -298,19 +335,45 @@ begin
     InitObject(field, 'wallhome1.txt', -33, -6, true);
     InitObject(field, 'wallhome2.txt', 11, -6, true);
     InitObject(field, 'bed.txt', 5, 5, true);
-    InitComplexObject(field, Lstack, 'lantern.txt', 21, 0);
-    InitComplexObject(field, Lstack, 'lantern.txt', -7, 2);
-    InitComplexObject(field, Lstack, 'lantern.txt', 25, -10);
-    InitComplexObject(field, Lstack, 'lantern.txt', 52, -18);
-    InitComplexObject(field, Lstack, 'lantern.txt', 92, -15);
-    InitComplexObject(field, Lstack, 'lantern.txt', 88, -35);
-    InitComplexObject(field, Lstack, 'lantern.txt', 23, -39);
+    InitComplexObject(field, Lstack, 'lantern.txt', 18, 6);
+    InitComplexObject(field, Lstack, 'minilantern.txt', -1, -5);
+    InitComplexObject(field, Lstack, 'minilantern.txt', 15, -5);
+    InitComplexObject(field, Lstack, 'lantern.txt', -1, 6);
+    InitObject(field, 'table.txt', -30, 0, true);
+    InitComplexObject(field, Lstack, 'minilantern.txt', -27, 1);
+
+    InitObject(field, 'campfire.txt', -22, -10, true);
+    InitComplexObject(field, Lstack, 'firecamp.txt', -19, -10);
+
+
+    // InitComplexObject(field, Lstack, 'lantern.txt', 25, -10);
+    InitComplexObject(field, Lstack, 'lantern.txt', 44, -17);
+    InitComplexObject(field, Lstack, 'lantern.txt', 85, -15);
+    // InitComplexObject(field, Lstack, 'lantern.txt', 88, -35);
+    // InitComplexObject(field, Lstack, 'lantern.txt', 23, -39);
     InitComplexObject(field, Lstack, 'lantern.txt', 183, -24);
     InitObject(field, 'water.txt', 112, -30, true);
     InitObject(field, 'bridge.txt', 112, -22, false);
     InitComplexObject(field, Lstack, 'minilantern.txt', 129, -22);
 
     InitLighting(field, Lstack)
+end;
+
+procedure ShowHero(var h: Hero; var field: Gfield);
+var
+    i, g: integer;
+    r: integer;
+begin
+    g := 1;
+    for i := -1 to 2 do begin
+        for r := 0 to (length(h.HCondList[h.condition, g]) - 1) do begin
+            GotoXY(h.CenX + h.PrintMap[ord(h.condition), g] + r, h.CenY+i);
+            TextColor(field[h.x - 5 + r + h.PrintMap[ord(h.condition), g], h.y + i].clr);
+            write(h.HCondList[h.condition, g][r+1]);
+        end;
+        g := g + 1
+    end;
+    GotoXY(1, 1)
 end;
 
 procedure RewriteField(var field: Gfield; var h: Hero; var r: ArrayRats; ShiftX, ShiftY: integer);
@@ -355,8 +418,8 @@ begin
             TextColor(field[h.x + ShiftX + x, h.y + ShiftY + y].clr);
             write(field[h.x + ShiftX + x, h.y + ShiftY + y].ch)
         end;
-    ShowHero(h);
-    ShowRats(r, h);
+    ShowHero(h, field);
+    ShowRats(r, h, field);
     WriteStatusBar(h);
 end;
 
@@ -373,6 +436,30 @@ begin
             end
         end;
     GotoXY(1, 1)
+end;
+
+procedure ShowRats(var rats: ArrayRats; var h: hero; var field: Gfield);
+var
+    i: integer;
+begin
+    for i := 1 to RatCount do
+        if rats[i].IsLived then
+            ShowRat(rats[i], h, field);
+end;
+
+procedure ShowRat(var r: rat; var h: hero; var field: Gfield);
+var
+    x, y: integer;
+    i: integer;
+begin
+    x := h.CenXField + r.x - h.x;
+    y := h.CenY + r.y - h.y;
+    for i := 0 to (length(r.Duration) - 1) do
+        if IsInsideVision(x+i, y) then begin
+            GotoXY(x+i, y);
+            TextColor(field[r.x + i, r.y].clr);
+            write(r.Duration[i + 1])
+        end
 end;
 
 procedure InitRatAttend(var r: rat; var field: Gfield; attend: byte);
@@ -479,6 +566,7 @@ begin
         h.y := h.y + y;
         InitHeroAttend(h, field, HeroSN);
     end;
+    InitHeroLight(h, field);
     RewriteField(field, h, r, ShiftX, ShiftY)
 end;
 
@@ -537,6 +625,7 @@ begin
     if IsInsideVision(x, y) then
         for i := 0 to 3 do begin
             GotoXY(x + i, y);
+            TextColor(field[r.x + i, r.y].clr);
             write(field[r.x + i, r.y].ch)
         end
 end;
@@ -552,7 +641,7 @@ begin
         else if x = 1 then
             r.Duration := RatPrintRight;
         InitRatAttend(r, field, RatSN);
-        ShowRat(r, h);
+        ShowRat(r, h, field);
         GotoXY(1, 1)
     end
 end;
@@ -565,15 +654,17 @@ begin
     for y := (ScreenHeight div 2 - 1) to (ScreenHeight div 2 + 2) do begin
         for x := (ScreenWidth div 2 - 6) to (ScreenWidth div 2 - 4) do begin 
             GotoXY(x, y);
+            TextColor(field[h.x + ShiftX + x, h.y + ShiftY + y].clr);
             write(field[h.x + ShiftX + x, h.y + ShiftY + y].ch)
         end;
         for x := (ScreenWidth div 2 + 2) to (ScreenWidth div 2 + 4) do begin 
             GotoXY(x, y);
+            TextColor(field[h.x + ShiftX + x, h.y + ShiftY + y].clr);
             write(field[h.x + ShiftX + x, h.y + ShiftY + y].ch)
         end
     end;
-    ShowHero(h);
-    ShowRats(r, h);
+    ShowHero(h, field);
+    ShowRats(r, h, field);
     GotoXY(1, 1)
 end;
 
